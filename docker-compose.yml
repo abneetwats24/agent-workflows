@@ -1,0 +1,10 @@
+services:
+  agent-workflows:
+    build: .
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: python src/main.py
