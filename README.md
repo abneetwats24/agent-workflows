@@ -36,6 +36,10 @@ This project implements agentic workflows using LangChain, LangGraph, and the Mo
 
 ### Local
 ```bash
+python src/agents/math/math_agent.py
+```
+#### NOT IMPLEMENTED WIP:
+```bash
 python src/main.py
 ```
 
