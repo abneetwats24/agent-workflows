@@ -30,7 +30,11 @@ async def create_mcp_oauth_provider(
     client_secret: str,
     redirect_uris: list[str],
     scope: str = "mcp:tools",
-    skip_registration: bool = True
+    skip_registration: bool = True,
+    grant_types: list[str] | None = None,
+    token_endpoint_auth_method: str = "client_secret_post",
+    redirect_handler: Any | None = None,
+    callback_handler: Any | None = None
 ) -> OAuthClientProvider:
     """
     Create and configure an OAuthClientProvider.
@@ -42,13 +46,20 @@ async def create_mcp_oauth_provider(
         redirect_uris: List of valid redirect URIs for the client.
         scope: OAuth scope to request.
         skip_registration: Whether to pre-populate client info to skip dynamic registration.
+        grant_types: List of grant types to support.
+        token_endpoint_auth_method: Auth method for token endpoint.
+        redirect_handler: Handler for interactive redirects.
+        callback_handler: Handler for interactive callbacks (code entry).
     """
     
+    if grant_types is None:
+        grant_types = ["client_credentials"]
+
     client_metadata_dict = {
         "client_id": client_id,
         "client_secret": client_secret,
-        "token_endpoint_auth_method": "client_secret_post",
-        "grant_types": ["client_credentials"],
+        "token_endpoint_auth_method": token_endpoint_auth_method,
+        "grant_types": grant_types,
         "scope": scope,
         "redirect_uris": redirect_uris,
     }
@@ -60,9 +71,9 @@ async def create_mcp_oauth_provider(
         client_info = OAuthClientInformationFull(
             client_id=client_id,
             client_secret=client_secret,
-            redirect_uris=[redirect_uris[0]],
-            token_endpoint_auth_method="client_secret_post",
-            grant_types=["client_credentials"],
+            redirect_uris=[redirect_uris[0]] if redirect_uris else [],
+            token_endpoint_auth_method=token_endpoint_auth_method,
+            grant_types=grant_types,
             scope=scope
         )
         await storage.set_client_info(client_info)
@@ -71,6 +82,6 @@ async def create_mcp_oauth_provider(
         server_url=server_url,
         client_metadata=OAuthClientMetadata.model_validate(client_metadata_dict),
         storage=storage,
-        redirect_handler=None,
-        callback_handler=None
+        redirect_handler=redirect_handler,
+        callback_handler=callback_handler
     )

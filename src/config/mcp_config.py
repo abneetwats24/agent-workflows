@@ -2,7 +2,8 @@
 Configuration for MCP clients.
 """
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Callable, Awaitable
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -28,7 +29,11 @@ class McpServiceConfig:
     """Configuration for a specific MCP service."""
     server_url: str
     redirect_uris: list[str]
+    grant_types: list[str] = field(default_factory=lambda: ["client_credentials", "authorization_code"])
     scope: str = "mcp:tools"
+    token_endpoint_auth_method: str = "client_secret_basic"
+    redirect_handler: Callable[[str], Awaitable[None]] | None = None
+    callback_handler: Callable[[], Awaitable[tuple[str, str | None]]] | None = None
 
 @dataclass
 class AppConfig:
@@ -43,7 +48,7 @@ class AppConfig:
         # Math Service
         services["math"] = McpServiceConfig(
             server_url=os.getenv("MCP_MATH_URL", os.getenv("MCP_SERVER_URL", "http://127.0.0.1:3000/math/math")),
-            redirect_uris=["http://127.0.0.1:3000/math/"]
+            redirect_uris=["http://127.0.0.1:3000/math/"],
         )
         
         # HR Policy Service

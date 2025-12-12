@@ -10,7 +10,6 @@ from typing import Any
 from mcp.client.session import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
 
-from src.shared.mcp.mcp_utils import apply_mcp_patches
 from src.shared.mcp.mcp_client_factory import create_mcp_oauth_provider
 from src.config.mcp_config import AppConfig
 
@@ -18,13 +17,40 @@ from src.config.mcp_config import AppConfig
 class BaseMCPAgent(ABC):
     """Base class for MCP agents with Keycloak authentication."""
 
+    @staticmethod
+    async def console_redirect_handler(url: str):
+        print(f"\n🔐  Please authenticate at: {url}")
+        print("    (Click the link or copy-paste it into your browser)")
+        print("    After authenticating, you will see a 'code' in the URL or page.")
+
+    @staticmethod
+    async def console_callback_handler() -> tuple[str, str | None]:
+        print("\n📥  Paste the FULL redirect URL here:")
+        print("    (Must comprise the entire URL including 'code' and 'state' parameters)")
+        response = input("    URL: ").strip()
+        
+        # Parse the URL to extract code and state
+        if "://" in response or "?" in response:
+            from urllib.parse import urlparse, parse_qs
+            parsed = urlparse(response)
+            params = parse_qs(parsed.query)
+            code = params.get("code", [None])[0]
+            state = params.get("state", [None])[0]
+            
+            if code:
+                return code, state
+                
+        # Fallback: if user still pasted just code, we return it but state will be None
+        # leading to the mismatch error we saw.
+        return response, None
+
     def __init__(self, config: AppConfig, service_name: str):
         self.config = config
         self.service_name = service_name
         self.session: ClientSession | None = None
         
         # Apply patches globally at startup (idempotent safe)
-        apply_mcp_patches()
+        # apply_mcp_patches(discovery_patch=discovery_patch, auth_patch=auth_patch)
 
     async def connect(self):
         """Connect to the MCP server using client credentials flow."""
@@ -35,13 +61,22 @@ class BaseMCPAgent(ABC):
 
         try:
             # Create OAuth provider using factory
+            
+            # Use configured handlers or default to console
+            redirect_handler = getattr(service_config, 'redirect_handler', None) or self.console_redirect_handler
+            callback_handler = getattr(service_config, 'callback_handler', None) or self.console_callback_handler
+            
             oauth_auth = await create_mcp_oauth_provider(
                 server_url=service_config.server_url,
                 client_id=self.config.keycloak.client_id,
                 client_secret=self.config.keycloak.client_secret,
                 redirect_uris=service_config.redirect_uris,
                 scope=service_config.scope,
-                skip_registration=True
+                skip_registration=True,
+                grant_types=getattr(service_config, 'grant_types', ["client_credentials"]),
+                token_endpoint_auth_method=getattr(service_config, 'token_endpoint_auth_method', "client_secret_post"),
+                redirect_handler=redirect_handler,
+                callback_handler=callback_handler
             )
 
             print("📡 Opening StreamableHTTP transport with client credentials auth...")

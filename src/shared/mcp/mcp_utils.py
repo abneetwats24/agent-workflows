@@ -8,20 +8,32 @@ import httpx
 from urllib.parse import urlparse
 import sys
 
-def apply_mcp_patches():
+def apply_mcp_patches(discovery_patch: bool = False, auth_patch: bool = True):
     """
-    Apply monkeypatches to the MCP library to support:
-    1. Path-based discovery URLs (e.g. /math/.well-known/...)
-    2. Client Credentials Grant flow (missing in library).
-    """
-    if getattr(sys, "_mcp_patches_applied", False):
-        return
+    Apply monkeypatches to the MCP library.
     
-    print("🩹 Applying MCP patches...")
-    mcp.client.auth.oauth2.build_protected_resource_metadata_discovery_urls = _masked_build_protected_resource_metadata_discovery_urls
-    OAuthClientProvider._perform_authorization = _masked_perform_authorization
-    sys._mcp_patches_applied = True
-    print("✅ MCP patches applied.")
+    Args:
+        discovery_patch: If True, patch discovery URL construction to look for .well-known paths.
+        auth_patch: If True, patch OAuth provider to support Client Credentials Grant flow.
+    """
+    # Track which patches are applied
+    if not hasattr(sys, "_mcp_patches_applied"):
+        sys._mcp_patches_applied = set()
+    
+    applied = sys._mcp_patches_applied
+    
+    if discovery_patch and "discovery" not in applied:
+        print("🩹 Applying MCP discovery patch...")
+        mcp.client.auth.oauth2.build_protected_resource_metadata_discovery_urls = _masked_build_protected_resource_metadata_discovery_urls
+        applied.add("discovery")
+        
+    if auth_patch and "auth" not in applied:
+        print("🩹 Applying MCP client credentials auth patch...")
+        OAuthClientProvider._perform_authorization = _masked_perform_authorization
+        applied.add("auth")
+    
+    if discovery_patch or auth_patch:
+        print("✅ MCP patches applied.")
 
 
 # ------------------------------------------------------------------------------
