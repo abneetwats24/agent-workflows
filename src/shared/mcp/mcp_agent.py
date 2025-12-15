@@ -76,7 +76,9 @@ class BaseMCPAgent(ABC):
                 grant_types=getattr(service_config, 'grant_types', ["client_credentials"]),
                 token_endpoint_auth_method=getattr(service_config, 'token_endpoint_auth_method', "client_secret_post"),
                 redirect_handler=redirect_handler,
-                callback_handler=callback_handler
+                callback_handler=callback_handler,
+                username=getattr(self.config.keycloak, 'username', None),
+                password=getattr(self.config.keycloak, 'password', None)
             )
 
             print("📡 Opening StreamableHTTP transport with client credentials auth...")

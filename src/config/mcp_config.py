@@ -14,6 +14,8 @@ class KeycloakConfig:
     client_id: str
     client_secret: str
     realm: str
+    username: str
+    password: str
 
     @classmethod
     def from_env(cls) -> "KeycloakConfig":
@@ -22,6 +24,8 @@ class KeycloakConfig:
             client_id=os.getenv("KEYCLOAK_CLIENT_ID", "abneet_mcp_client"),
             client_secret=os.getenv("KEYCLOAK_CLIENT_SECRET", "REMOVED"),
             realm=os.getenv("KEYCLOAK_REALM", "openspace"),
+            username=os.getenv("KEYCLOAK_USERNAME", "abneet"),
+            password=os.getenv("KEYCLOAK_PASSWORD", "REMOVED"),
         )
 
 @dataclass
